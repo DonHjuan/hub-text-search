@@ -1,0 +1,173 @@
+<html>
+    <head>
+        <title>Hub recommendations viewer</title>
+        <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/3.6.1/fuse.min.js"></script>
+        <script src="posts.json"></script>
+        <style>
+            html { height:100%;}
+            body {height: 100%; margin: 0px}
+            #infobox { width:100%; height: 100%; overflow-y: scroll}
+
+            #searchbox {
+                width: 100%;
+                padding-top: 10px;
+                padding-left: 10px;
+                padding-bottom: 4px;
+                font-family: sans-serif;
+            }
+
+            #tagsearch {
+                width: 50%;
+            }
+
+            #previewimg {
+                height: 20vh;
+                max-width: 50%;
+                padding-left: 4px;
+                padding-right: 4px;
+                padding-top: 4px;
+                float: right;
+                object-fit: contain;
+                box-sizing: border-box
+            }
+
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                padding: 0 4px;
+            }
+
+            /* Create equal columns that sits next to each other */
+            .column {
+                flex: 9%;
+                max-width: 25%;
+                padding: 0 4px;
+            }
+
+            .column img {
+                margin-top: 8px;
+                vertical-align: middle;
+                width: 100%;
+                max-height: 20vh;
+                object-fit: contain;
+            }
+
+            .exactmatch {
+                border-style: solid;
+                border-color: greenyellow;
+                border-width: thin;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="searchbox">
+            <input type="text" name="tags" id="tagsearch" autocapitalize="off" spellcheck="false" onkeyup="doEnterPress(event)">
+            <input type="button" id="searchbutton" value="Search text" onclick="doTextSearch()">
+        </div>
+        <div id="infobox">
+            <div class="row">
+                <div id="col0" class="column"></div>
+                <div id="col1" class="column"></div>
+                <div id="col2" class="column"></div>
+                <div id="col3" class="column"></div>
+                <div id="col4" class="column"></div>
+                <div id="col5" class="column"></div>
+                <div id="col6" class="column"></div>
+                <div id="col7" class="column"></div>
+            </div>
+        </div>
+        <script>
+            const imgCols = []
+            for (let i = 0; i < 8; i++) {
+                imgCols.push(document.getElementById('col' + i))
+            }
+
+            const infobox = document.getElementById('infobox');
+
+            function appendPreviewImgs(nodes) {
+                let col = 0;
+                for (let node of nodes) {
+                    const nodeImg = document.createElement('img')
+                    nodeImg.src = node.preview
+                    nodeImg.title = `Match: ${Math.round((node.match + Number.EPSILON) * 1000) / 1000}\nScore: ${node.score}` //node.text
+                    if (node.match < 0.01) {
+                        nodeImg.classList.add('exactmatch')
+                    }
+
+                    const link = document.createElement('a')
+                    link.href = 'https://hypnohub.net/post/show/' + node.id
+                    link.appendChild(nodeImg)
+                    
+                    imgCols[col].appendChild(link)
+
+                    col = (col + 1) % 8
+                }
+            }
+
+            function setPreviewImgs(nodes) {
+                for (let col of imgCols) {
+                    while (col.firstChild) {
+                        col.removeChild(col.firstChild);
+                    }
+                }
+                
+                appendPreviewImgs(nodes.slice(0, 100))
+                
+                infobox.groupNodes = nodes;
+                infobox.curNodes = 100
+            }
+
+            const jInfobox = $(infobox);
+            const scrollCallback = () => {
+                if(jInfobox.scrollTop() + jInfobox.innerHeight() >= jInfobox[0].scrollHeight - 200) {
+                    const newNodes = infobox.groupNodes.splice(infobox.curNodes, infobox.curNodes + 100)
+                    infobox.curNodes += 100
+
+                    appendPreviewImgs(newNodes)
+                }
+            }
+
+            $(infobox).scroll(scrollCallback);
+            //$(window).scroll(scrollCallback);
+
+            //const groupNodes = recs.sort((a,b) => (a.simil > b.simil) ? -1 : 1)
+            //console.log(groupNodes.length)
+
+            setPreviewImgs(recs)
+
+            function getNodeImportance(node) {
+                return Math.pow(node.item.score, 1/4) / Math.max(node.score, 0.02)
+            }
+
+            const fuse = new Fuse(recs, {
+                shouldSort: false,
+                includeScore: true,
+                threshold: 0.6,
+                location: 0,
+                distance: 1e+30,
+                minMatchCharLength: 2,
+                keys: [
+                    "text"
+                ]
+            })
+
+            function doTextSearch() {
+                const searchText = document.getElementById("tagsearch").value
+                console.log("`" + searchText + "`")
+
+                const foundNodes = fuse.search(searchText)
+                const outNodes = foundNodes.sort((a,b) => (getNodeImportance(a) > getNodeImportance(b)) ? -1 : 1).map(x => ({...x.item, match: x.score}) )
+
+                setPreviewImgs(outNodes)
+            }
+
+            function doEnterPress(e) {
+                const code = (e.keyCode ? e.keyCode : e.which);
+                if (code == 13) {
+                    doTextSearch()
+                }
+            }
+        </script>
+    </body>
+</html>
