@@ -7,13 +7,12 @@
         <style>
             html { height:100%;}
             body {height: 100%; margin: 0px}
-            #infobox { width:100%; height: 100%; overflow-y: scroll}
+            #infobox { width:100%; height: 100%; }
 
             #searchbox {
-                width: 100%;
                 padding-top: 10px;
                 padding-left: 10px;
-                padding-bottom: 4px;
+                padding-bottom: 8px;
                 font-family: sans-serif;
             }
 
@@ -21,36 +20,28 @@
                 width: 50%;
             }
 
-            #previewimg {
-                height: 20vh;
-                max-width: 50%;
-                padding-left: 4px;
-                padding-right: 4px;
-                padding-top: 4px;
-                float: right;
-                object-fit: contain;
-                box-sizing: border-box
-            }
-
-            .row {
+            .resultlist {
                 display: flex;
                 flex-wrap: wrap;
                 padding: 0 4px;
             }
 
-            /* Create equal columns that sits next to each other */
-            .column {
-                flex: 9%;
+            .resultlist a {
+                padding: 4px 4px;
+                box-sizing: border-box;
+                flex: 200px 1 1;
+                min-width: 10%;
                 max-width: 25%;
-                padding: 0 4px;
+                min-height: 20px;
+                display: block;
             }
 
-            .column img {
-                margin-top: 8px;
-                vertical-align: middle;
-                width: 100%;
-                max-height: 20vh;
-                object-fit: contain;
+            /* Create equal columns that sits next to each other */
+            .resultlist img {
+                max-width: 100%;
+                max-height: min(250px, 25vw);
+                margin: auto;
+                display: block;
             }
 
             .exactmatch {
@@ -66,27 +57,15 @@
             <input type="button" id="searchbutton" value="Search text" onclick="doTextSearch()">
         </div>
         <div id="infobox">
-            <div class="row">
-                <div id="col0" class="column"></div>
-                <div id="col1" class="column"></div>
-                <div id="col2" class="column"></div>
-                <div id="col3" class="column"></div>
-                <div id="col4" class="column"></div>
-                <div id="col5" class="column"></div>
-                <div id="col6" class="column"></div>
-                <div id="col7" class="column"></div>
+            <div id="resultlist" class="resultlist">
             </div>
         </div>
         <script>
-            const imgCols = []
-            for (let i = 0; i < 8; i++) {
-                imgCols.push(document.getElementById('col' + i))
-            }
+            const imgContainer = document.getElementById('resultlist')
 
             const infobox = document.getElementById('infobox');
 
             function appendPreviewImgs(nodes) {
-                let col = 0;
                 for (let node of nodes) {
                     const nodeImg = document.createElement('img')
                     nodeImg.src = node.preview
@@ -99,17 +78,13 @@
                     link.href = 'https://hypnohub.net/post/show/' + node.id
                     link.appendChild(nodeImg)
                     
-                    imgCols[col].appendChild(link)
-
-                    col = (col + 1) % 8
+                    imgContainer.appendChild(link)
                 }
             }
 
             function setPreviewImgs(nodes) {
-                for (let col of imgCols) {
-                    while (col.firstChild) {
-                        col.removeChild(col.firstChild);
-                    }
+                while (imgContainer.firstChild) {
+                    imgContainer.removeChild(imgContainer.firstChild);
                 }
                 
                 appendPreviewImgs(nodes.slice(0, 100))
@@ -118,17 +93,17 @@
                 infobox.curNodes = 100
             }
 
-            const jInfobox = $(infobox);
+            const jInfobox = $(window);
+            const jDocument = $(document)
             const scrollCallback = () => {
-                if(jInfobox.scrollTop() + jInfobox.innerHeight() >= jInfobox[0].scrollHeight - 200) {
+                if(jInfobox.scrollTop() + jInfobox.height() >= jDocument.height() - 50) {
                     const newNodes = infobox.groupNodes.splice(infobox.curNodes, infobox.curNodes + 100)
                     infobox.curNodes += 100
 
                     appendPreviewImgs(newNodes)
                 }
             }
-
-            $(infobox).scroll(scrollCallback);
+            jInfobox.scroll(scrollCallback);
             //$(window).scroll(scrollCallback);
 
             //const groupNodes = recs.sort((a,b) => (a.simil > b.simil) ? -1 : 1)
